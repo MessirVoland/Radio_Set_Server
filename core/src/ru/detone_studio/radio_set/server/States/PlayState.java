@@ -29,10 +29,7 @@ import static com.badlogic.gdx.math.MathUtils.random;
  */
 
 public class PlayState extends State {
-    Texture img;
-    ParticleEffect effect;
     private OrthographicCamera camera;
-    Array<ParticleEffect> effects;
 
 
     static final int multi = 1;
@@ -57,6 +54,7 @@ public class PlayState extends State {
 
     static boolean output_signal=false;
     int who_rec;
+    int dynamic_port=9001;
 
     static boolean touched=false;
     float current_dt=0.0f;
@@ -72,45 +70,11 @@ public class PlayState extends State {
         send.setPosition(10,10);
         send2.setPosition(10,600);
 
-        effects = new Array<ParticleEffect>();
-
-        effect = new ParticleEffect();
-        effect.load(Gdx.files.internal("particles/cat_pow.p"),Gdx.files.internal("particles"));
-        effect.setPosition(106,200);
-        effect.start();
-        effects.add(effect);
-        effect = new ParticleEffect();
-        effect.load(Gdx.files.internal("particles/cat_pow.p"),Gdx.files.internal("particles"));
-        effect.setPosition(145,270);
-        effect.start();
-        effects.add(effect);
-        effect = new ParticleEffect();
-        effect.load(Gdx.files.internal("particles/cat_pow.p"),Gdx.files.internal("particles"));
-        effect.setPosition(280,320);
-        effect.start();
-        effects.add(effect);
-        effect = new ParticleEffect();
-        effect.load(Gdx.files.internal("particles/cat_pow.p"),Gdx.files.internal("particles"));
-        effect.setPosition(354,275);
-        effect.start();
-        effects.add(effect);
-        effect = new ParticleEffect();
-        effect.load(Gdx.files.internal("particles/cat_pow.p"),Gdx.files.internal("particles"));
-        effect.setPosition(257,264);
-        effect.start();
-        effects.add(effect);
-
-
-
-        img = new Texture("egg.png");
-        img.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-
-
-        //play_snd();
+                //play_snd();
         save_snd();
-        recv_msg(9999);
+        recv_msg(9000,true);
         //recv_msg(9998);
-        recv_msg(9997);
+        //recv_msg(9997,false);
 
 
 
@@ -176,28 +140,13 @@ public class PlayState extends State {
             handleInput();
 
         }
-        for (ParticleEffect effect_m: effects) {
-            effect_m.update(dt);
-        }
-
-
-        // if ((data.size!=0)
-        //        &(blocked.size!=0)
-        //         ) {
-        //    System.out.println("data.size: "+data.size);
-
-
-        // }
 
     }
 
     @Override
     public void render(SpriteBatch sb) {
         sb.setProjectionMatrix(camera.combined);
-        sb.draw(img,0,0);
-        for (ParticleEffect effect_m: effects) {
-            effect_m.draw(sb);
-        }
+
         send.draw(sb);
         send2.draw(sb);
 
@@ -259,7 +208,8 @@ public class PlayState extends State {
     }
 
 
-    public void recv_msg(final int mimport){
+    public void recv_msg(final int mimport, final boolean Authorization_Port){
+
         new Thread(new Runnable() {
             @Override
             public void run () {
@@ -267,135 +217,179 @@ public class PlayState extends State {
                 SocketHints hints1;
                 ServerSocketHints hints;
                 byte buffer[] = new byte[392];
-                try {
-                    hints = new ServerSocketHints();
-                    hints1 = new SocketHints();
-                    hints1.socketTimeout = 5000;
-                    server = Gdx.net.newServerSocket(Net.Protocol.TCP, "192.168.1.196", mimport, hints);
-                    //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
-                }
-                catch (Exception ignore) {
-                    server=null;
-                    hints=null;
-                    hints1=null;
-                }
-
-                while (true) {
-                    // wait for the next client connection
+                //Порт авторизации
+                if (Authorization_Port) {
                     try {
-                        System.out.println("con?:");
-                        Socket client = server.accept(hints1);
-                        System.out.println("accept:");
-                        // read message and send it back
-                        //String message = new BufferedReader(new InputStreamReader(client.getInputStream())).readLine();
+                        hints = new ServerSocketHints();
+                        hints1 = new SocketHints();
+                        hints1.socketTimeout = 5000;
+                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, "192.168.1.196", mimport, hints);
+                        //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
-                        byte hand_shake_buffer[]=new byte[2];
-                        client.getInputStream().read(hand_shake_buffer);
-                        System.out.println("hand_shake_buffer[0] : "+mimport+" "+hand_shake_buffer[0]);
-                        if (hand_shake_buffer[0]==15) {
-                            hand_shake_buffer[0] = 20;
-                            client.getOutputStream().write(hand_shake_buffer);
-                            who_rec=mimport;
+                    } catch (Exception ignore) {
+                        server = null;
+                        hints = null;
+                        hints1 = null;
+                    }
+                    while (true) {
+                        try {
+                            System.out.println("conected? _auth: "+mimport);
+                            Socket client = server.accept(hints1);
+                            System.out.println("accept:");
 
-                            //System.out.println("buffer");
-                            ByteBuffer buffer2 = ByteBuffer.allocate(2);
-                            //System.out.println("buffer2");
-                            data_rcv.add(new short[samples * 1]);
-                            System.out.println("data_rcv");
+                            byte hand_shake_buffer[] = new byte[2];
+                            client.getInputStream().read(hand_shake_buffer);
+                            System.out.println("hand_shake_buffer[0] : " + mimport + " " + hand_shake_buffer[0]);
+                            //Если все хорошо клиент спрашивает порт
+                            if (hand_shake_buffer[0]==11){
+                                //ответ 21 что все хорошо
+                                hand_shake_buffer[0]=21;
+                                client.getOutputStream().write(hand_shake_buffer);
+                                System.out.println("send answer " + hand_shake_buffer[0]);
+                                dynamic_port-=9000;
 
-                            sync_i = 0;
-                            for (local_i = 1; local_i <= (225); local_i++) {
-                                client.getInputStream().read(buffer);
-                                //System.out.println("i "+local_i);
-                                //buffer2.order(ByteOrder.LITTLE_ENDIAN);
-                                for (int j = 1; j < (99); j++) {
-
-                                    buffer2.put(buffer[j * 2 - 2]);
-                                    buffer2.put(buffer[j * 2 - 1]);
-                                    // System.out.println("buffer2 in "+buffer2);
-                                    data_rcv.get(data_rcv.size - 1)[sync_i] = buffer2.getShort(0);
-                                    buffer2.clear();
-
-                                    if (local_i * j >= (22049)) {
-                                        System.out.println("ublocked");
-                                        System.out.println("buffer.rcv 0 " + data_rcv.get(0)[0]);
-                                        System.out.println("buffer.rcv 1 " + data_rcv.get(0)[1]);
-                                        System.out.println("buffer.rcv 2 " + data_rcv.get(0)[2]);
-                                        System.out.println("buffer.rcv 3 " + data_rcv.get(0)[3]);
-                                        System.out.println("buffer.rcv 4 " + data_rcv.get(0)[4]);
-                                        blocked.add(false);
-                                    }
-                                    sync_i++;
-                                }
-                                //buffer2.putShort(data.get(0)[i]);
-
+                                //отправка свободного порта(нужно доработать)
+                                hand_shake_buffer[0]= (byte) dynamic_port;
+                                dynamic_port+=9000;
+                                recv_msg(dynamic_port,false);
+                                dynamic_port++;
+                                client.getOutputStream().write(hand_shake_buffer);
+                                System.out.println("send port " + hand_shake_buffer[0]);
+                                //client.dispose();
                             }
-                            System.out.println("next");
-                        }else {
-                            if (blocked != null) {
-                                if (blocked.size > 0) {
-                                    if (!blocked.get(0)) {
-                                        if (who_rec!=mimport) {
-                                            blocked.set(0, true);
-                                            hand_shake_buffer[0] = 25;
-                                            client.getOutputStream().write(hand_shake_buffer);
-                                            ByteBuffer buffer2 = ByteBuffer.allocate(2);
-                                            sync_j = 0;
-                                            for (int i = 1; i <= (225); i++) {
-                                                for (int j = 1; j < (99); j++) {
-                                                    buffer2.putShort(data_rcv.get(0)[sync_j]);
-                                                    buffer[j * 2 - 2] = buffer2.get(0);
-                                                    buffer[j * 2 - 1] = buffer2.get(1);
-                                                    buffer2.clear();
-                                                    sync_j++;
-                                                }
-                                                client.getOutputStream().write(buffer);
 
-                                            }
-                                            data_rcv.removeIndex(0);
-                                            //data_rcv.clear();
 
-                                            blocked.removeIndex(0);
+                        } catch (Exception e) {
+                            Gdx.app.log("PingPongSocketExample", "an error occured", e);
+                        }
+
+                    }
+                }
+                else
+                {
+
+                    try {
+                        hints = new ServerSocketHints();
+                        hints1 = new SocketHints();
+                        hints1.socketTimeout = 5000;
+                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, "192.168.1.196", mimport, hints);
+                        //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
+
+                    } catch (Exception ignore) {
+                        server = null;
+                        hints = null;
+                        hints1 = null;
+                    }
+
+                    while (true) {
+                        // wait for the next client connection
+                        try {
+                            System.out.println("conected? _logical: "+mimport);
+                            Socket client = server.accept(hints1);
+                            System.out.println("accept:");
+                            // read message and send it back
+                            //String message = new BufferedReader(new InputStreamReader(client.getInputStream())).readLine();
+
+                            byte hand_shake_buffer[] = new byte[2];
+                            client.getInputStream().read(hand_shake_buffer);
+                            System.out.println("hand_shake_buffer[0] : " + mimport + " " + hand_shake_buffer[0]);
+                            if (hand_shake_buffer[0] == 15) {
+                                hand_shake_buffer[0] = 20;
+                                client.getOutputStream().write(hand_shake_buffer);
+                                who_rec = mimport;
+
+                                //System.out.println("buffer");
+                                ByteBuffer buffer2 = ByteBuffer.allocate(2);
+                                //System.out.println("buffer2");
+                                data_rcv.add(new short[samples * 1]);
+                                System.out.println("data_rcv");
+
+                                sync_i = 0;
+                                for (local_i = 1; local_i <= (225); local_i++) {
+                                    client.getInputStream().read(buffer);
+                                    //System.out.println("i "+local_i);
+                                    //buffer2.order(ByteOrder.LITTLE_ENDIAN);
+                                    for (int j = 1; j < (99); j++) {
+
+                                        buffer2.put(buffer[j * 2 - 2]);
+                                        buffer2.put(buffer[j * 2 - 1]);
+                                        // System.out.println("buffer2 in "+buffer2);
+                                        data_rcv.get(data_rcv.size - 1)[sync_i] = buffer2.getShort(0);
+                                        buffer2.clear();
+
+                                        if (local_i * j >= (22049)) {
+                                            System.out.println("ublocked");
+                                            System.out.println("buffer.rcv 0 " + data_rcv.get(0)[0]);
+                                            System.out.println("buffer.rcv 1 " + data_rcv.get(0)[1]);
+                                            System.out.println("buffer.rcv 2 " + data_rcv.get(0)[2]);
+                                            System.out.println("buffer.rcv 3 " + data_rcv.get(0)[3]);
+                                            System.out.println("buffer.rcv 4 " + data_rcv.get(0)[4]);
+                                            blocked.add(false);
                                         }
-                                        else
-                                        {
+                                        sync_i++;
+                                    }
+                                    //buffer2.putShort(data.get(0)[i]);
+
+                                }
+                                System.out.println("next");
+                            } else {
+                                if (blocked != null) {
+                                    if (blocked.size > 0) {
+                                        if (!blocked.get(0)) {
+                                            if (who_rec != mimport) {
+                                                blocked.set(0, true);
+                                                hand_shake_buffer[0] = 25;
+                                                client.getOutputStream().write(hand_shake_buffer);
+                                                ByteBuffer buffer2 = ByteBuffer.allocate(2);
+                                                sync_j = 0;
+                                                for (int i = 1; i <= (225); i++) {
+                                                    for (int j = 1; j < (99); j++) {
+                                                        buffer2.putShort(data_rcv.get(0)[sync_j]);
+                                                        buffer[j * 2 - 2] = buffer2.get(0);
+                                                        buffer[j * 2 - 1] = buffer2.get(1);
+                                                        buffer2.clear();
+                                                        sync_j++;
+                                                    }
+                                                    client.getOutputStream().write(buffer);
+
+                                                }
+                                                data_rcv.removeIndex(0);
+                                                //data_rcv.clear();
+
+                                                blocked.removeIndex(0);
+                                            } else {
+                                                hand_shake_buffer[0] = 20;
+                                                client.getOutputStream().write(hand_shake_buffer);
+                                            }
+
+                                        } else {
                                             hand_shake_buffer[0] = 20;
                                             client.getOutputStream().write(hand_shake_buffer);
                                         }
-
-                                    }
-                                    else
-                                    {
+                                    } else {
                                         hand_shake_buffer[0] = 20;
                                         client.getOutputStream().write(hand_shake_buffer);
                                     }
-                                }
-                                else
-                                {
+                                } else {
                                     hand_shake_buffer[0] = 20;
                                     client.getOutputStream().write(hand_shake_buffer);
                                 }
-                            }
-                            else
-                            {
-                                hand_shake_buffer[0] = 20;
-                                client.getOutputStream().write(hand_shake_buffer);
-                            }
 
 
+                            }
+
+                            //buffer[0]=125;
+
+
+                            //Gdx.app.log("PingPongSocketExample", "got client message: "+buffer[0]+" "+buffer[1]+" "+buffer[2]+" "+buffer[3]+" ");
+                            //System.out.println("got client message: " + buffer);
+                            //client.getOutputStream().write("PONG\n".getBytes());
+                        } catch (Exception e) {
+                            Gdx.app.log("PingPongSocketExample", "an error occured", e);
                         }
 
-                        //buffer[0]=125;
-
-
-                        //Gdx.app.log("PingPongSocketExample", "got client message: "+buffer[0]+" "+buffer[1]+" "+buffer[2]+" "+buffer[3]+" ");
-                        //System.out.println("got client message: " + buffer);
-                        //client.getOutputStream().write("PONG\n".getBytes());
-                    } catch (Exception e) {
-                        Gdx.app.log("PingPongSocketExample", "an error occured", e);
                     }
-
                 }
             }
         }).start();
