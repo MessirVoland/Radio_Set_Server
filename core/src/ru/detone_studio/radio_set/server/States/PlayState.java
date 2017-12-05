@@ -1,6 +1,7 @@
 package ru.detone_studio.radio_set.server.States;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.audio.AudioDevice;
 import com.badlogic.gdx.audio.AudioRecorder;
@@ -18,7 +19,12 @@ import com.badlogic.gdx.net.SocketHints;
 import com.badlogic.gdx.utils.Array;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.Enumeration;
 
 import ru.detone_studio.radio_set.server.GameStateManager;
 
@@ -55,7 +61,7 @@ public class PlayState extends State {
     static boolean output_signal=false;
     int who_rec;
     int dynamic_port=9001;
-    String ip_adress="192.168.0.2";
+    String ip_adress="192.168.2.2";
     int clients_online=0;
 
     static boolean touched=false;
@@ -73,8 +79,39 @@ public class PlayState extends State {
         send2.setPosition(10,600);
 
                 //play_snd();
-        save_snd();
-        recv_msg(9000,true);
+        //save_snd();
+        Input.TextInputListener listener = new Input.TextInputListener() {
+            @Override
+            public void input(String text) {
+                ip_adress=text;
+                recv_msg(9000,true);
+            }
+
+            @Override
+            public void canceled() {
+                recv_msg(9000,true);
+            }
+        };
+
+        try {
+            for (Enumeration en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = (NetworkInterface) en.nextElement();
+                for (Enumeration enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = (InetAddress) enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress()&&inetAddress instanceof Inet4Address) {
+                        String ipAddress=inetAddress.getHostAddress().toString();
+                        System.out.println("IP address: "+ipAddress);
+                        ip_adress=ipAddress;
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+           // Log.e("Socket exception in GetIP Address of Utilities", ex.toString());
+        }
+
+        Gdx.input.getTextInput(listener, "Enter server adress", ip_adress, "");
+
+        //recv_msg(9000,true);
         //recv_msg(9998);
         //recv_msg(9997,false);
 
@@ -102,7 +139,7 @@ public class PlayState extends State {
                 touched = true;
             }
         }
-        if (Gdx.input.justTouched()) {
+       /* if (Gdx.input.justTouched()) {
 
 
 
@@ -131,7 +168,7 @@ public class PlayState extends State {
             }
 
             //System.out.println("New Tread");
-        }
+        }*/
     }
 
     @Override
@@ -149,12 +186,13 @@ public class PlayState extends State {
     public void render(SpriteBatch sb) {
         sb.setProjectionMatrix(camera.combined);
 
-        send.draw(sb);
-        send2.draw(sb);
+        //send.draw(sb);
+        //send2.draw(sb);
 
-        FontRed1.draw(sb,"Sunc_i"+sync_i,10,300);
-        FontRed1.draw(sb,"Sync_j"+sync_j,10,270);
+        FontRed1.draw(sb,"Sunc_i: "+sync_i,10,300);
+        FontRed1.draw(sb,"Sync_j: "+sync_j,10,270);
         FontRed1.draw(sb,"Clients_online: "+clients_online,10,400);
+        FontRed1.draw(sb,"Server working on: "+ip_adress,10,420);
 
 
     }
@@ -268,6 +306,7 @@ public class PlayState extends State {
 
                         } catch (Exception e) {
                             Gdx.app.log("PingPongSocketExample", "Error Auth", e);
+
                         }
 
                     }
