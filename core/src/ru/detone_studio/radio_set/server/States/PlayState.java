@@ -55,6 +55,7 @@ public class PlayState extends State {
     static boolean output_signal=false;
     int who_rec;
     int dynamic_port=9001;
+    String ip_adress="192.168.0.2";
 
     static boolean touched=false;
     float current_dt=0.0f;
@@ -213,6 +214,7 @@ public class PlayState extends State {
         new Thread(new Runnable() {
             @Override
             public void run () {
+                boolean close_socket=true;//заглушка для открытых сокетов
                 ServerSocket server;
                 SocketHints hints1;
                 ServerSocketHints hints;
@@ -224,7 +226,7 @@ public class PlayState extends State {
                         hints = new ServerSocketHints();
                         hints1 = new SocketHints();
                         hints1.socketTimeout = 5000;
-                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, "192.168.1.196", mimport, hints);
+                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
                     } catch (Exception ignore) {
@@ -232,7 +234,7 @@ public class PlayState extends State {
                         hints = null;
                         hints1 = null;
                     }
-                    while (true) {
+                    while (close_socket) {
                         try {
                             System.out.println("conected? _auth: "+mimport);
                             Socket client = server.accept(hints1);
@@ -261,7 +263,7 @@ public class PlayState extends State {
 
 
                         } catch (Exception e) {
-                            Gdx.app.log("PingPongSocketExample", "an error occured", e);
+                            Gdx.app.log("PingPongSocketExample", "Error Auth", e);
                         }
 
                     }
@@ -271,9 +273,17 @@ public class PlayState extends State {
 
                     try {
                         hints = new ServerSocketHints();
+                        //hints.receiveBufferSize=2048;
+
+
                         hints1 = new SocketHints();
                         hints1.socketTimeout = 5000;
-                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, "192.168.1.196", mimport, hints);
+
+                        //hints1.sendBufferSize=2048;
+                        //hints1.receiveBufferSize=2048;
+
+
+                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
                     } catch (Exception ignore) {
@@ -282,7 +292,7 @@ public class PlayState extends State {
                         hints1 = null;
                     }
 
-                    while (true) {
+                    while (close_socket) {
                         // wait for the next client connection
                         try {
                             System.out.println("conected? _logical: "+mimport);
@@ -337,7 +347,7 @@ public class PlayState extends State {
                                 if (blocked != null) {
                                     if (blocked.size > 0) {
                                         if (!blocked.get(0)) {
-                                            if (who_rec != mimport) {
+                                            if (who_rec == mimport) {
                                                 blocked.set(0, true);
                                                 hand_shake_buffer[0] = 25;
                                                 client.getOutputStream().write(hand_shake_buffer);
@@ -386,6 +396,11 @@ public class PlayState extends State {
                             //System.out.println("got client message: " + buffer);
                             //client.getOutputStream().write("PONG\n".getBytes());
                         } catch (Exception e) {
+
+                            if (dynamic_port>9000){
+
+                                //close_socket=false;
+                            }
                             Gdx.app.log("PingPongSocketExample", "an error occured", e);
                         }
 
