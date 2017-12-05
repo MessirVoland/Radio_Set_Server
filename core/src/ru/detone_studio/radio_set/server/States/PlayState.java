@@ -56,6 +56,7 @@ public class PlayState extends State {
     int who_rec;
     int dynamic_port=9001;
     String ip_adress="192.168.0.2";
+    int clients_online=0;
 
     static boolean touched=false;
     float current_dt=0.0f;
@@ -151,8 +152,9 @@ public class PlayState extends State {
         send.draw(sb);
         send2.draw(sb);
 
-        FontRed1.draw(sb,"LOcal_i"+sync_i,10,300);
+        FontRed1.draw(sb,"Sunc_i"+sync_i,10,300);
         FontRed1.draw(sb,"Sync_j"+sync_j,10,270);
+        FontRed1.draw(sb,"Clients_online: "+clients_online,10,400);
 
 
     }
@@ -226,6 +228,7 @@ public class PlayState extends State {
                         hints = new ServerSocketHints();
                         hints1 = new SocketHints();
                         hints1.socketTimeout = 5000;
+
                         server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
@@ -238,7 +241,8 @@ public class PlayState extends State {
                         try {
                             System.out.println("conected? _auth: "+mimport);
                             Socket client = server.accept(hints1);
-                            System.out.println("accept:");
+
+                            System.out.println("accept: "+client.getRemoteAddress());
 
                             byte hand_shake_buffer[] = new byte[2];
                             client.getInputStream().read(hand_shake_buffer);
@@ -273,15 +277,17 @@ public class PlayState extends State {
 
                     try {
                         hints = new ServerSocketHints();
-                        //hints.receiveBufferSize=2048;
-
 
                         hints1 = new SocketHints();
                         hints1.socketTimeout = 5000;
 
-                        //hints1.sendBufferSize=2048;
-                        //hints1.receiveBufferSize=2048;
 
+                        clients_online++;
+                        //int buffer_size=4096*10000;
+                        //hints.receiveBufferSize=buffer_size;
+                       // hints1.sendBufferSize=buffer_size;
+                       // hints1.receiveBufferSize=buffer_size;
+                        //hints1.connectTimeout=5000;
 
                         server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
@@ -293,10 +299,11 @@ public class PlayState extends State {
                     }
 
                     while (close_socket) {
-                        // wait for the next client connection
+                        // cокет передачи данных
                         try {
                             System.out.println("conected? _logical: "+mimport);
                             Socket client = server.accept(hints1);
+
                             System.out.println("accept:");
                             // read message and send it back
                             //String message = new BufferedReader(new InputStreamReader(client.getInputStream())).readLine();
@@ -399,7 +406,8 @@ public class PlayState extends State {
 
                             if (dynamic_port>9000){
 
-                                //close_socket=false;
+                                close_socket=false;
+                                clients_online--;
                             }
                             Gdx.app.log("PingPongSocketExample", "an error occured", e);
                         }
