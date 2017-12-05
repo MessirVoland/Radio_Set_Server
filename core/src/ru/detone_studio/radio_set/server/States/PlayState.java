@@ -220,7 +220,7 @@ public class PlayState extends State {
                 ServerSocket server;
                 SocketHints hints1;
                 ServerSocketHints hints;
-                byte buffer[] = new byte[392];
+                byte buffer[] = new byte[196];
 
                 //Порт авторизации
                 if (Authorization_Port) {
@@ -283,10 +283,10 @@ public class PlayState extends State {
 
 
                         clients_online++;
-                        //int buffer_size=4096*10000;
-                        //hints.receiveBufferSize=buffer_size;
-                       // hints1.sendBufferSize=buffer_size;
-                       // hints1.receiveBufferSize=buffer_size;
+                        int buffer_size=4096/4;
+                        hints.receiveBufferSize=buffer_size;
+                        hints1.sendBufferSize=buffer_size;
+                        hints1.receiveBufferSize=buffer_size;
                         //hints1.connectTimeout=5000;
 
                         server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
@@ -327,7 +327,7 @@ public class PlayState extends State {
                                     client.getInputStream().read(buffer);
                                     //System.out.println("i "+local_i);
                                     //buffer2.order(ByteOrder.LITTLE_ENDIAN);
-                                    for (int j = 1; j < (99); j++) {
+                                    for (int j = 1; j <= 98; j++) {
 
                                         buffer2.put(buffer[j * 2 - 2]);
                                         buffer2.put(buffer[j * 2 - 1]);
@@ -361,7 +361,7 @@ public class PlayState extends State {
                                                 ByteBuffer buffer2 = ByteBuffer.allocate(2);
                                                 sync_j = 0;
                                                 for (int i = 1; i <= (225); i++) {
-                                                    for (int j = 1; j < (99); j++) {
+                                                    for (int j = 1; j <= (98); j++) {
                                                         buffer2.putShort(data_rcv.get(0)[sync_j]);
                                                         buffer[j * 2 - 2] = buffer2.get(0);
                                                         buffer[j * 2 - 1] = buffer2.get(1);
