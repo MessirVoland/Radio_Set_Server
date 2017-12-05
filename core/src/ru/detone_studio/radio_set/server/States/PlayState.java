@@ -62,6 +62,7 @@ public class PlayState extends State {
     int who_rec;
     int dynamic_port=9001;
     String ip_adress="192.168.2.2";
+    //String ip_adress="185.132.242.124";
     int clients_online=0;
 
     static boolean touched=false;
@@ -108,7 +109,7 @@ public class PlayState extends State {
         } catch (SocketException ex) {
            // Log.e("Socket exception in GetIP Address of Utilities", ex.toString());
         }
-
+        //Gdx.input.getTextInput(listener, "Enter server adress","","");
         Gdx.input.getTextInput(listener, "Enter server adress", ip_adress, "");
 
         //recv_msg(9000,true);
@@ -322,7 +323,7 @@ public class PlayState extends State {
 
 
                         clients_online++;
-                        int buffer_size=4096/4;
+                        int buffer_size=4096;
                         hints.receiveBufferSize=buffer_size;
                         hints1.sendBufferSize=buffer_size;
                         hints1.receiveBufferSize=buffer_size;
@@ -373,27 +374,19 @@ public class PlayState extends State {
                                         // System.out.println("buffer2 in "+buffer2);
                                         data_rcv.get(data_rcv.size - 1)[sync_i] = buffer2.getShort(0);
                                         buffer2.clear();
-
-                                        if (local_i * j >= (22049)) {
-                                            System.out.println("ublocked");
-                                            System.out.println("buffer.rcv 0 " + data_rcv.get(0)[0]);
-                                            System.out.println("buffer.rcv 1 " + data_rcv.get(0)[1]);
-                                            System.out.println("buffer.rcv 2 " + data_rcv.get(0)[2]);
-                                            System.out.println("buffer.rcv 3 " + data_rcv.get(0)[3]);
-                                            System.out.println("buffer.rcv 4 " + data_rcv.get(0)[4]);
-                                            blocked.add(false);
-                                        }
                                         sync_i++;
                                     }
                                     //buffer2.putShort(data.get(0)[i]);
 
                                 }
+                                System.out.println("ublocked");
+                                blocked.add(false);
                                 System.out.println("next");
                             } else {
                                 if (blocked != null) {
                                     if (blocked.size > 0) {
                                         if (!blocked.get(0)) {
-                                            if (who_rec == mimport) {
+                                            if (who_rec != mimport) {
                                                 blocked.set(0, true);
                                                 hand_shake_buffer[0] = 25;
                                                 client.getOutputStream().write(hand_shake_buffer);
