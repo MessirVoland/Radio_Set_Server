@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Enumeration;
 
 import ru.detone_studio.radio_set.server.GameStateManager;
@@ -52,6 +53,7 @@ public class PlayState extends State {
     private BitmapFont FontRed1=new BitmapFont();
     int local_i;
     int sync_i,sync_j;
+    int info_i=0;
     //short[] data = new short[samples*1];
 
 
@@ -68,6 +70,9 @@ public class PlayState extends State {
     static boolean touched=false;
     float current_dt=0.0f;
 
+    //Буффер отправки
+    int size_of_system_buffer=4096*11;
+    byte system_buffer[]=new byte[size_of_system_buffer];
 
 
 
@@ -190,7 +195,7 @@ public class PlayState extends State {
         //send.draw(sb);
         //send2.draw(sb);
 
-        FontRed1.draw(sb,"Sunc_i: "+sync_i,10,300);
+        FontRed1.draw(sb,"Info_i: "+info_i,10,300);
         FontRed1.draw(sb,"Sync_j: "+sync_j,10,270);
         FontRed1.draw(sb,"Clients_online: "+clients_online,10,400);
         FontRed1.draw(sb,"Server working on: "+ip_adress,10,420);
@@ -323,7 +328,8 @@ public class PlayState extends State {
 
 
                         clients_online++;
-                        int buffer_size=4096;
+                        //int buffer_size=4096;
+                        int buffer_size=size_of_system_buffer;
                         hints.receiveBufferSize=buffer_size;
                         hints1.sendBufferSize=buffer_size;
                         hints1.receiveBufferSize=buffer_size;
@@ -362,7 +368,9 @@ public class PlayState extends State {
                                 data_rcv.add(new short[samples * 1]);
                                 System.out.println("data_rcv");
 
-                                sync_i = 0;
+
+                                sync_i = 4001;
+                                /*
                                 for (local_i = 1; local_i <= (225); local_i++) {
                                     client.getInputStream().read(buffer);
                                     //System.out.println("i "+local_i);
@@ -378,15 +386,43 @@ public class PlayState extends State {
                                     }
                                     //buffer2.putShort(data.get(0)[i]);
 
+                                }*/
+                                info_i=1;
+                                byte null_bute=0;
+                                boolean get_wrong_block=true;
+                                int sended_blocks=0;
+                                for (int i=1;i<samples;i++){
+                                   if (sync_i>=size_of_system_buffer/2){
+                                       Arrays.fill(system_buffer,null_bute);
+
+
+                                       client.getInputStream().read(system_buffer);
+                                       client.getOutputStream().write(system_buffer[0]);
+                                       sended_blocks++;
+                                       client.getOutputStream().flush();
+
+                                       System.out.println("Recieve: "+sended_blocks+" b1: "+system_buffer[0]+" b2: "+system_buffer[1]);
+
+                                       //System.out.println("System read");
+                                       sync_i=1;
+                                   }
+                                   buffer2.put(system_buffer[sync_i*2+0]);
+                                   buffer2.put(system_buffer[sync_i*2+1]);
+                                   data_rcv.get(data_rcv.size - 1)[i] = buffer2.getShort(0);
+                                   buffer2.clear();
+                                   sync_i++;
+
+                                   info_i++;
                                 }
+
                                 System.out.println("ublocked");
                                 blocked.add(false);
-                                System.out.println("next");
+                                System.out.println("NEXT");
                             } else {
                                 if (blocked != null) {
                                     if (blocked.size > 0) {
                                         if (!blocked.get(0)) {
-                                            if (who_rec != mimport) {
+                                            if (who_rec == mimport) {
                                                 blocked.set(0, true);
                                                 hand_shake_buffer[0] = 25;
                                                 client.getOutputStream().write(hand_shake_buffer);
