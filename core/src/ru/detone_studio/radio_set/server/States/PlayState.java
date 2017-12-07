@@ -19,6 +19,8 @@ import com.badlogic.gdx.net.SocketHints;
 import com.badlogic.gdx.utils.Array;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -71,7 +73,7 @@ public class PlayState extends State {
     float current_dt=0.0f;
 
     //Буффер отправки
-    int size_of_system_buffer=4096*11;
+    int size_of_system_buffer=4096*2;
     byte system_buffer[]=new byte[size_of_system_buffer];
 
 
@@ -262,6 +264,7 @@ public class PlayState extends State {
             public void run () {
                 boolean close_socket=true;//заглушка для открытых сокетов
                 ServerSocket server;
+                java.net.ServerSocket serverSocket2 = null;
                 SocketHints hints1;
                 ServerSocketHints hints;
                 byte buffer[] = new byte[196];
@@ -307,6 +310,7 @@ public class PlayState extends State {
                                 client.getOutputStream().write(hand_shake_buffer);
                                 System.out.println("send port " + hand_shake_buffer[0]);
                                 //client.dispose();
+
                             }
 
 
@@ -328,14 +332,21 @@ public class PlayState extends State {
 
 
                         clients_online++;
-                        //int buffer_size=4096;
+                        int mini_buffer_size=45056;
                         int buffer_size=size_of_system_buffer;
-                        hints.receiveBufferSize=buffer_size;
-                        hints1.sendBufferSize=buffer_size;
-                        hints1.receiveBufferSize=buffer_size;
+                        hints.receiveBufferSize=mini_buffer_size;
+
+                        //byte ss=127;
+                        //hints1.trafficClass=ss;
+                        //hints1.sendBufferSize=buffer_size;
+                        //hints1.receiveBufferSize=buffer_size;
+                        hints1.sendBufferSize=mini_buffer_size;
+                        hints1.receiveBufferSize=mini_buffer_size;
                         //hints1.connectTimeout=5000;
 
-                        server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
+                        //server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
+                        serverSocket2=new java.net.ServerSocket(mimport);
+                        System.out.println("Waiting for a client...");
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
                     } catch (Exception ignore) {
@@ -348,18 +359,25 @@ public class PlayState extends State {
                         // cокет передачи данных
                         try {
                             System.out.println("conected? _logical: "+mimport);
-                            Socket client = server.accept(hints1);
+                            //Socket client = server.accept(hints1);
+                            java.net.Socket client2 = serverSocket2.accept();
 
-                            System.out.println("accept:");
+                            System.out.println("Got a client :) ... Finally, someone saw me through all the cover!");
+                            System.out.println();
+                            InputStream sin = client2.getInputStream();
+                            OutputStream sout = client2.getOutputStream();
+                            client2.setReceiveBufferSize(size_of_system_buffer);
+                            client2.setTcpNoDelay(true);
                             // read message and send it back
                             //String message = new BufferedReader(new InputStreamReader(client.getInputStream())).readLine();
 
                             byte hand_shake_buffer[] = new byte[2];
-                            client.getInputStream().read(hand_shake_buffer);
+                            client2.getInputStream().read(hand_shake_buffer);
                             System.out.println("hand_shake_buffer[0] : " + mimport + " " + hand_shake_buffer[0]);
                             if (hand_shake_buffer[0] == 15) {
                                 hand_shake_buffer[0] = 20;
-                                client.getOutputStream().write(hand_shake_buffer);
+                                //send 20 all right
+                                client2.getOutputStream().write(hand_shake_buffer);
                                 who_rec = mimport;
 
                                 //System.out.println("buffer");
@@ -390,29 +408,40 @@ public class PlayState extends State {
                                 info_i=1;
                                 byte null_bute=0;
                                 boolean get_wrong_block=true;
-                                int sended_blocks=0;
-                                for (int i=1;i<samples;i++){
+                                //int sended_blocks=0;
+
+                                //client2.getInputStream().read(system_buffer);
+                               // system_buffer[0]=20;
+                                //Thread.sleep(1000);
+                                //client2.getOutputStream().write(system_buffer[0]);
+                                //sended_blocks++;
+                                //client.getOutputStream().flush();
+
+                                //System.out.println("Recieve: "+sended_blocks+" b1: "+system_buffer[0]+" b2: "+system_buffer[1]);
+                                sync_i=9000;
+                                for (int i=0;i<samples;i++){
                                    if (sync_i>=size_of_system_buffer/2){
-                                       Arrays.fill(system_buffer,null_bute);
-
-
-                                       client.getInputStream().read(system_buffer);
-                                       client.getOutputStream().write(system_buffer[0]);
-                                       sended_blocks++;
-                                       client.getOutputStream().flush();
-
-                                       System.out.println("Recieve: "+sended_blocks+" b1: "+system_buffer[0]+" b2: "+system_buffer[1]);
-
-                                       //System.out.println("System read");
-                                       sync_i=1;
+                                       //Arrays.fill(system_buffer,null_bute);
+                                       System.out.println("System read");
+                                       client2.getInputStream().read(system_buffer);
+                                       system_buffer[0]=20;
+                                       //Thread.sleep(1000);
+                                       client2.getOutputStream().write(system_buffer[0]);
+                                       sync_i=0;
+                                    info_i++;
                                    }
                                    buffer2.put(system_buffer[sync_i*2+0]);
                                    buffer2.put(system_buffer[sync_i*2+1]);
+                                    //System.out.println("N: "+system_buffer[i*2+0]);
+
                                    data_rcv.get(data_rcv.size - 1)[i] = buffer2.getShort(0);
+
+                                    //System.out.println("N: "+i+" s: "+data_rcv.get(data_rcv.size - 1)[i]);
+
                                    buffer2.clear();
                                    sync_i++;
 
-                                   info_i++;
+
                                 }
 
                                 System.out.println("ublocked");
@@ -422,10 +451,10 @@ public class PlayState extends State {
                                 if (blocked != null) {
                                     if (blocked.size > 0) {
                                         if (!blocked.get(0)) {
-                                            if (who_rec == mimport) {
+                                            if (who_rec != mimport) {
                                                 blocked.set(0, true);
                                                 hand_shake_buffer[0] = 25;
-                                                client.getOutputStream().write(hand_shake_buffer);
+                                                client2.getOutputStream().write(hand_shake_buffer);
                                                 ByteBuffer buffer2 = ByteBuffer.allocate(2);
                                                 sync_j = 0;
                                                 for (int i = 1; i <= (225); i++) {
@@ -436,7 +465,7 @@ public class PlayState extends State {
                                                         buffer2.clear();
                                                         sync_j++;
                                                     }
-                                                    client.getOutputStream().write(buffer);
+                                                    client2.getOutputStream().write(buffer);
 
                                                 }
                                                 data_rcv.removeIndex(0);
@@ -445,20 +474,20 @@ public class PlayState extends State {
                                                 blocked.removeIndex(0);
                                             } else {
                                                 hand_shake_buffer[0] = 20;
-                                                client.getOutputStream().write(hand_shake_buffer);
+                                                client2.getOutputStream().write(hand_shake_buffer);
                                             }
 
                                         } else {
                                             hand_shake_buffer[0] = 20;
-                                            client.getOutputStream().write(hand_shake_buffer);
+                                            client2.getOutputStream().write(hand_shake_buffer);
                                         }
                                     } else {
                                         hand_shake_buffer[0] = 20;
-                                        client.getOutputStream().write(hand_shake_buffer);
+                                        client2.getOutputStream().write(hand_shake_buffer);
                                     }
                                 } else {
                                     hand_shake_buffer[0] = 20;
-                                    client.getOutputStream().write(hand_shake_buffer);
+                                    client2.getOutputStream().write(hand_shake_buffer);
                                 }
 
 
