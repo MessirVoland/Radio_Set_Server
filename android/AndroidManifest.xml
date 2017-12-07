@@ -15,6 +15,7 @@
             android:name="ru.detone_studio.radio_set.server.AndroidLauncher"
             android:label="@string/app_name" 
             android:screenOrientation="landscape"
+            
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
