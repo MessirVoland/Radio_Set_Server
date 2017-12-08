@@ -76,6 +76,11 @@ public class PlayState extends State {
     int size_of_system_buffer=4096*2;
     byte system_buffer[]=new byte[size_of_system_buffer];
 
+    int current_sends_block;
+    Array<Short> current_block=new Array<Short>();
+
+
+
 
 
     public PlayState(GameStateManager gsm) {
@@ -93,6 +98,7 @@ public class PlayState extends State {
             public void input(String text) {
                 ip_adress=text;
                 recv_msg(9000,true);
+                clean_up();
             }
 
             @Override
@@ -118,6 +124,8 @@ public class PlayState extends State {
         }
         //Gdx.input.getTextInput(listener, "Enter server adress","","");
         Gdx.input.getTextInput(listener, "Enter server adress", ip_adress, "");
+
+
 
         //recv_msg(9000,true);
         //recv_msg(9998);
@@ -256,6 +264,55 @@ public class PlayState extends State {
 
     }
 
+    public void clean_up(){
+        System.out.println("start clean_up thread");
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                int run;
+                while (true){
+                    if (data_rcv.size>0) {
+                        System.out.println("start clean_up");
+                        run = 0;
+                        for (Short miniblock : current_block) {
+                            if (miniblock > 0) {
+                                run++;
+                            }
+                        }
+                        System.out.println("run= "+run);
+                        if (run >= clients_online-1) {
+                            System.out.println("delete");
+                            for (int k=0;k<clients_online;k++){
+                              current_block.set(k, (short) 0);
+                            }
+
+                            System.out.println("Clean_up d.size=" + data_rcv.size);
+                            data_rcv.removeIndex(0);
+                            //data_rcv.clear();
+
+                            blocked.removeIndex(0);
+                        }
+                        try {
+                            Thread.sleep(800);
+                        } catch (InterruptedException e) {
+                           // e.printStackTrace();
+                        }
+                    }
+                    else
+                    {
+                        System.out.println("d.size=" + data_rcv.size);
+                        try {
+                            Thread.sleep(800);
+                        } catch (InterruptedException e) {
+                           // e.printStackTrace();
+                        }
+                    }
+
+                }
+            }
+        }).start();
+    }
 
     public void recv_msg(final int mimport, final boolean Authorization_Port){
 
@@ -268,6 +325,7 @@ public class PlayState extends State {
                 SocketHints hints1;
                 ServerSocketHints hints;
                 byte buffer[] = new byte[196];
+                int number_block=0;
 
                 //Порт авторизации
                 if (Authorization_Port) {
@@ -331,17 +389,23 @@ public class PlayState extends State {
                         hints1.socketTimeout = 5000;
 
 
+
                         clients_online++;
-                        int mini_buffer_size=45056;
-                        int buffer_size=size_of_system_buffer;
-                        hints.receiveBufferSize=mini_buffer_size;
+                        current_block.add((short) 0);
+                        number_block =  current_block.size-1;
+
+
+
+                        //int mini_buffer_size=45056;
+                        //int buffer_size=size_of_system_buffer;
+                        //hints.receiveBufferSize=mini_buffer_size;
 
                         //byte ss=127;
                         //hints1.trafficClass=ss;
                         //hints1.sendBufferSize=buffer_size;
                         //hints1.receiveBufferSize=buffer_size;
-                        hints1.sendBufferSize=mini_buffer_size;
-                        hints1.receiveBufferSize=mini_buffer_size;
+                        //hints1.sendBufferSize=mini_buffer_size;
+                        //hints1.receiveBufferSize=mini_buffer_size;
                         //hints1.connectTimeout=5000;
 
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, ip_adress, mimport, hints);
@@ -350,9 +414,9 @@ public class PlayState extends State {
                         //server = Gdx.net.newServerSocket(Net.Protocol.TCP, "185.132.242.124", 9999, hints);
 
                     } catch (Exception ignore) {
-                        server = null;
-                        hints = null;
-                        hints1 = null;
+                        //server = null;
+                        //hints = null;
+                       // hints1 = null;
                     }
 
                     while (close_socket) {
@@ -362,8 +426,8 @@ public class PlayState extends State {
                             //Socket client = server.accept(hints1);
                             java.net.Socket client2 = serverSocket2.accept();
 
-                            System.out.println("Got a client :) ... Finally, someone saw me through all the cover!");
-                            System.out.println();
+                            //System.out.println("Got a client :) ... Finally, someone saw me through all the cover!");
+                            //System.out.println();
                             InputStream sin = client2.getInputStream();
                             OutputStream sout = client2.getOutputStream();
                             client2.setReceiveBufferSize(size_of_system_buffer);
@@ -448,30 +512,43 @@ public class PlayState extends State {
                                 blocked.add(false);
                                 System.out.println("NEXT");
                             } else {
+
+                                //обратная пересылка ------------------------------------------------------------------------------------------------->
                                 if (blocked != null) {
                                     if (blocked.size > 0) {
                                         if (!blocked.get(0)) {
                                             if (who_rec != mimport) {
-                                                blocked.set(0, true);
-                                                hand_shake_buffer[0] = 25;
-                                                client2.getOutputStream().write(hand_shake_buffer);
-                                                ByteBuffer buffer2 = ByteBuffer.allocate(2);
-                                                sync_j = 0;
-                                                for (int i = 1; i <= (225); i++) {
-                                                    for (int j = 1; j <= (98); j++) {
-                                                        buffer2.putShort(data_rcv.get(0)[sync_j]);
-                                                        buffer[j * 2 - 2] = buffer2.get(0);
-                                                        buffer[j * 2 - 1] = buffer2.get(1);
-                                                        buffer2.clear();
-                                                        sync_j++;
+                                                if (current_block.get(number_block)==0) {
+                                                    System.out.println("Start send");
+
+
+                                                    hand_shake_buffer[0] = 25;
+                                                    client2.getOutputStream().write(hand_shake_buffer);
+                                                    ByteBuffer buffer2 = ByteBuffer.allocate(2);
+                                                    sync_j = 0;
+                                                    for (int i = 1; i <= (225); i++) {
+                                                        for (int j = 1; j <= (98); j++) {
+                                                            buffer2.putShort(data_rcv.get(0)[sync_j]);
+                                                            buffer[j * 2 - 2] = buffer2.get(0);
+                                                            buffer[j * 2 - 1] = buffer2.get(1);
+                                                            buffer2.clear();
+                                                            sync_j++;
+                                                        }
+                                                        client2.getOutputStream().write(buffer);
+
                                                     }
-                                                    client2.getOutputStream().write(buffer);
 
+                                                    current_block.set(number_block, (short) (current_block.get(number_block)+1));
+                                                    //data_rcv.removeIndex(0);
+                                                    //data_rcv.clear();
+
+                                                    //blocked.removeIndex(0);
+                                                }else
+                                                {
+                                                    hand_shake_buffer[0] = 20;
+                                                    client2.getOutputStream().write(hand_shake_buffer);
                                                 }
-                                                data_rcv.removeIndex(0);
-                                                //data_rcv.clear();
 
-                                                blocked.removeIndex(0);
                                             } else {
                                                 hand_shake_buffer[0] = 20;
                                                 client2.getOutputStream().write(hand_shake_buffer);
@@ -489,6 +566,8 @@ public class PlayState extends State {
                                     hand_shake_buffer[0] = 20;
                                     client2.getOutputStream().write(hand_shake_buffer);
                                 }
+
+                                //----------------------------------------------------------------------------------------------------------------------------------->
 
 
                             }
