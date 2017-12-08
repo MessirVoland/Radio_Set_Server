@@ -424,6 +424,7 @@ public class PlayState extends State {
                         try {
                             System.out.println("conected? _logical: "+mimport);
                             //Socket client = server.accept(hints1);
+                            serverSocket2.setSoTimeout(5000);
                             java.net.Socket client2 = serverSocket2.accept();
 
                             //System.out.println("Got a client :) ... Finally, someone saw me through all the cover!");
@@ -515,8 +516,8 @@ public class PlayState extends State {
 
                                 //обратная пересылка ------------------------------------------------------------------------------------------------->
                                 if (blocked != null) {
-                                    if (blocked.size > 0) {
-                                        if (!blocked.get(0)) {
+                                    if ((blocked.size > 0)&((current_block.get(number_block))<blocked.size)) {
+                                        if (!blocked.get(current_block.get(number_block))) {
                                             if (who_rec != mimport) {
                                                 if (current_block.get(number_block)==0) {
                                                     System.out.println("Start send");
